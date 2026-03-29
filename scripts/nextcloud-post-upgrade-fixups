@@ -1,17 +1,23 @@
 #!/bin/bash
 
 # Configuration
-PHP="/usr/bin/php"
-NC_DIR="/var/www/nextcloud"
-OCC="sudo -u www-data $PHP $NC_DIR/occ"
+OCC="sudo -u www-data /usr/bin/php /var/www/nextcloud/occ"
 TARGET_VERSION="28.0.14"
 
 # Start the timer
 START_TIME=$(date +%s)
 
+# Helper function for version comparison
+# Returns 0 (true) if $1 is >= $2
+version_ge() {
+    # Test: if the lowest version in a sorted list is the target, 
+    # then the current version is >= target.
+    [ "$2" = "$(printf "$1\n$2" | sort -V | head -n1)" ]
+}
+
 echo "--- Starting Nextcloud Post-Upgrade Fixups ---"
 
-# 1. Database Fixups with labels
+# 1. Database Fixups
 echo -n "Checking for missing columns... "
 $OCC db:add-missing-columns -q && echo "Done."
 
@@ -21,14 +27,16 @@ $OCC db:add-missing-indices -q && echo "Done."
 echo -n "Checking for missing primary keys... "
 $OCC db:add-missing-primary-keys -q && echo "Done."
 
-# 2. Version Check for Expensive Repairs
+# 2. Extract Version and Determine Flags
+# We use .version for the most granular comparison (28.0.14.1)
 CURRENT_VERSION=$($OCC status --output=json 2>/dev/null | jq -r '.version')
-LOWEST_VERSION=$(printf "$TARGET_VERSION\n$CURRENT_VERSION" | sort -V | head -n1)
 
 REPAIR_FLAGS=""
-if [ "$LOWEST_VERSION" == "$TARGET_VERSION" ]; then
-    echo "Nextcloud $CURRENT_VERSION detected. Including --include-expensive."
+if version_ge "$CURRENT_VERSION" "$TARGET_VERSION"; then
+    echo "Nextcloud $CURRENT_VERSION detected (>= $TARGET_VERSION). Including --include-expensive."
     REPAIR_FLAGS="--include-expensive"
+else
+    echo "Nextcloud $CURRENT_VERSION detected. Skipping expensive repairs."
 fi
 
 # 3. Maintenance Repair
