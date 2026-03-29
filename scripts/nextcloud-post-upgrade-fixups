@@ -1,5 +1,45 @@
-sudo -u www-data php /var/www/nextcloud/occ db:add-missing-columns
-sudo -u www-data php /var/www/nextcloud/occ db:add-missing-indices
-sudo -u www-data php /var/www/nextcloud/occ db:add-missing-primary-keys
-sudo -u www-data php /var/www/nextcloud/occ maintenance:repair
-sudo -u www-data php /var/www/nextcloud/occ -V
+#!/bin/bash
+
+# Configuration
+PHP="/usr/bin/php"
+NC_DIR="/var/www/nextcloud"
+OCC="sudo -u www-data $PHP $NC_DIR/occ"
+TARGET_VERSION="28.0.14"
+
+# Start the timer
+START_TIME=$(date +%s)
+
+echo "--- Starting Nextcloud Post-Upgrade Fixups ---"
+
+# 1. Database Fixups with labels
+echo -n "Checking for missing columns... "
+$OCC db:add-missing-columns -q && echo "Done."
+
+echo -n "Checking for missing indices... "
+$OCC db:add-missing-indices -q && echo "Done."
+
+echo -n "Checking for missing primary keys... "
+$OCC db:add-missing-primary-keys -q && echo "Done."
+
+# 2. Version Check for Expensive Repairs
+CURRENT_VERSION=$($OCC status --output=json 2>/dev/null | jq -r '.version')
+LOWEST_VERSION=$(printf "$TARGET_VERSION\n$CURRENT_VERSION" | sort -V | head -n1)
+
+REPAIR_FLAGS=""
+if [ "$LOWEST_VERSION" == "$TARGET_VERSION" ]; then
+    echo "Nextcloud $CURRENT_VERSION detected. Including --include-expensive."
+    REPAIR_FLAGS="--include-expensive"
+fi
+
+# 3. Maintenance Repair
+echo "Running maintenance repair (this may take a moment)..."
+$OCC maintenance:repair $REPAIR_FLAGS
+
+# 4. Completion and Timing
+END_TIME=$(date +%s)
+ELAPSED=$((END_TIME - START_TIME))
+
+echo
+echo "--- Fixups Complete ---"
+$OCC -V
+echo "Total execution time: ${ELAPSED} seconds."
