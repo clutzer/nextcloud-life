@@ -1,0 +1,48 @@
+#!/bin/bash
+
+# Configuration - update paths if necessary
+NC_DIR="/var/www/nextcloud"
+PHP="/usr/bin/php"
+OCC="sudo -u www-data $PHP $NC_DIR/occ"
+UPDATER="sudo -u www-data $PHP $NC_DIR/updater/updater.phar"
+FIXUP_SCRIPT="$HOME/nextcloud-life/nextcloud-post-upgrade-fixups"
+
+echo "--- Checking for Nextcloud Updates ---"
+$OCC update:check
+
+# Capture the exit code of the check
+# 0 = update available, 1 = no update or error
+if [ $? -ne 0 ]; then
+    echo "No updates available or check failed."
+    exit 0
+fi
+
+echo
+read -p "An update is available. Do you want to start the upgrade process? (y/n): " confirm
+
+if [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]]; then
+    echo "--- Clearing old logs for a clean upgrade slate ---"
+    $OCC log:manage --clear
+
+    echo "--- Starting Phase 1: File Update ---"
+    # --no-interaction allows the updater to run without mid-process prompts
+    $UPDATER --no-interaction
+
+    echo
+    echo "--- Starting Phase 2: Database Migration ---"
+    $OCC upgrade
+
+    echo
+    echo "--- Running Post-Upgrade Fixups ---"
+    if [ -f "$FIXUP_SCRIPT" ]; then
+        bash "$FIXUP_SCRIPT"
+    else
+        echo "Warning: Fixup script not found at $FIXUP_SCRIPT"
+    fi
+
+    echo
+    echo "--- Upgrade Process Complete ---"
+    $OCC status
+else
+    echo "Upgrade cancelled by user."
+fi
