@@ -48,6 +48,17 @@ An idempotent script to configure APCu as the local memory cache.
 - Installs `php-apcu` and enables it for the CLI (`apc.enable_cli=1`).
 - Updates `config.php` to utilize `\OC\Memcache\APCu`.
 
+## ⚙️ Configuration Hints
+
+### Sudo Alias
+Add this to your `~/.bashrc` to make `occ` feel native:
+```
+alias occ='sudo -u www-data /usr/bin/php /var/www/nextcloud/occ'
+```
+
+### Log Rotation
+Logs are managed via `copytruncate` in `/etc/logrotate.d/nextcloud`. This prevents file-handle lockups during the rotation of the `nextcloud.log`.
+
 ## 🔍 Troubleshooting
 
 ### Monitoring Logs
@@ -80,15 +91,4 @@ OR, via system truncate:
 ```
 sudo truncate -s 0 /mnt/storage/nextcloud/nextcloud.log
 ```
-
-## ⚙️ Configuration Hints
-
-### Sudo Alias
-Add this to your `~/.bashrc` to make `occ` feel native:
-```
-alias occ='sudo -u www-data /usr/bin/php /var/www/nextcloud/occ'
-```
-
-### Log Rotation
-Logs are managed via `copytruncate` in `/etc/logrotate.d/nextcloud`. This prevents file-handle lockups during the rotation of the `nextcloud.log`.
 
