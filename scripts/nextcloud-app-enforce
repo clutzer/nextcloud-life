@@ -3,8 +3,8 @@
 Nextcloud App Enforce Script
 
 Usage:
-  python3 nextcloud-app-enforce.py                  # Check only (dry-run, idempotent)
-  python3 nextcloud-app-enforce.py --enforce        # Check + apply changes
+  python3 nextcloud-app-enforce                     # Check only (dry-run, idempotent)
+  python3 nextcloud-app-enforce --enforce           # Check + apply changes
 """
 
 import json
@@ -38,7 +38,7 @@ def get_current_apps():
 def load_desired_state():
     if not os.path.isfile(CONFIG):
         print(f"❌ Desired state file not found: {CONFIG}")
-        print("   First create it with: python3 nextcloud-app-inventory.py --save")
+        print("   First create it with: python3 nextcloud-app-inventory --save")
         sys.exit(1)
 
     desired = {}
@@ -94,7 +94,7 @@ def main():
 
     if not enforce:
         print("\nThis was a dry-run (no changes made).")
-        print("To apply changes, run: python3 nextcloud-app-enforce.py --enforce")
+        print("To apply changes, run: python3 nextcloud-app-enforce --enforce")
     else:
         if changes > 0:
             print(f"\n✅ {changes} change(s) applied. Running quick repair...")

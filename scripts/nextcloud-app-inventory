@@ -3,13 +3,14 @@
 Nextcloud App Inventory Script
 
 Usage:
-  python3 nextcloud-app-inventory.py                  # Print inventory only (safe, idempotent)
-  python3 nextcloud-app-inventory.py --save           # Print + save current state as desired config
+  python3 nextcloud-app-inventory                   # Print inventory only (safe)
+  python3 nextcloud-app-inventory --save            # Print + save current state as desired config
 """
 
 import json
 import sys
 import os
+import argparse
 from datetime import datetime
 from subprocess import check_output
 
@@ -19,8 +20,7 @@ CONFIG = os.path.expanduser("~/.config/nextcloud-apps.conf")
 
 def run_occ(*args):
     try:
-        output = check_output([*OCC, *args], text=True)
-        return output
+        return check_output([*OCC, *args], text=True)
     except Exception as e:
         print(f"Error running occ: {e}")
         sys.exit(1)
@@ -35,7 +35,7 @@ def get_app_list():
 
 def print_inventory():
     print("=== Nextcloud App Inventory ===")
-    print(f"Current status as of {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"Current status as of {datetime.now().strftime('%Y-%m-%d %H:%M:%S %Z')}")
     print(run_occ("app:list", "--output=plain").strip())
 
 def save_desired_state():
@@ -45,7 +45,7 @@ def save_desired_state():
     with open(CONFIG, "w") as f:
         f.write("# Nextcloud App Desired State Configuration\n")
         f.write("# Format:  app_id = enable|disable|ignore   # comment\n")
-        f.write("# Edit this file, then run 'nextcloud-app-enforce.py --enforce'\n\n")
+        f.write("# Edit this file, then run 'nextcloud-app-enforce --enforce'\n\n")
 
         for section in ["enabled", "disabled"]:
             if section in data:
@@ -55,11 +55,18 @@ def save_desired_state():
 
     print(f"\n✅ Desired state saved to: {CONFIG}")
 
-if __name__ == "__main__":
+def main():
+    parser = argparse.ArgumentParser(description="Nextcloud App Inventory Tool")
+    parser.add_argument("--save", action="store_true", help="Save current inventory as desired state config")
+    args = parser.parse_args()
+
     print_inventory()
 
-    if len(sys.argv) > 1 and sys.argv[1] == "--save":
+    if args.save:
         save_desired_state()
     else:
         print("\nTo save current inventory as desired state, run:")
-        print("   python3 nextcloud-app-inventory.py --save")
+        print("   python3 nextcloud-app-inventory --save")
+
+if __name__ == "__main__":
+    main()
