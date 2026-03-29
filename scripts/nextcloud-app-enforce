@@ -1,0 +1,106 @@
+#!/usr/bin/env python3
+"""
+Nextcloud App Enforce Script
+
+Usage:
+  python3 nextcloud-app-enforce.py                  # Check only (dry-run, idempotent)
+  python3 nextcloud-app-enforce.py --enforce        # Check + apply changes
+"""
+
+import json
+import sys
+import os
+from subprocess import check_output, CalledProcessError
+
+NC_DIR = "/var/www/nextcloud"
+OCC = ["sudo", "-u", "www-data", "php", f"{NC_DIR}/occ"]
+CONFIG = os.path.expanduser("~/.config/nextcloud-apps.conf")
+
+def run_occ(*args, quiet=False):
+    try:
+        output = check_output([*OCC, *args], text=True)
+        if not quiet:
+            print(output.strip())
+        return output
+    except CalledProcessError as e:
+        if not quiet:
+            print(e.output.strip())
+        return ""
+
+def get_current_apps():
+    output = run_occ("app:list", "--output=json", quiet=True)
+    try:
+        return json.loads(output)
+    except json.JSONDecodeError:
+        print("Failed to parse occ JSON output.")
+        sys.exit(1)
+
+def load_desired_state():
+    if not os.path.isfile(CONFIG):
+        print(f"❌ Desired state file not found: {CONFIG}")
+        print("   First create it with: python3 nextcloud-app-inventory.py --save")
+        sys.exit(1)
+
+    desired = {}
+    with open(CONFIG) as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            if "=" not in line:
+                continue
+            app_part, state_part = line.split("=", 1)
+            app = app_part.strip()
+            state = state_part.strip().split()[0]  # take first word (enable/disable/ignore)
+            if state in ("enable", "disable", "ignore"):
+                desired[app] = state
+    return desired
+
+def main():
+    enforce = len(sys.argv) > 1 and sys.argv[1] == "--enforce"
+
+    print("=== Nextcloud App State vs Desired Configuration ===")
+
+    current = get_current_apps()
+    desired = load_desired_state()
+
+    changes = 0
+
+    for app, wanted_state in desired.items():
+        if wanted_state == "ignore":
+            continue
+
+        # Find current state
+        current_state = None
+        if "enabled" in current and app in current["enabled"]:
+            current_state = "enable"
+        elif "disabled" in current and app in current["disabled"]:
+            current_state = "disable"
+
+        if current_state is None:
+            print(f"⚠️  App '{app}' not found — skipping")
+            continue
+
+        if current_state != wanted_state:
+            print(f"→ {app} is currently {current_state} but should be {wanted_state}")
+            if enforce:
+                if wanted_state == "enable":
+                    print(f"   Enabling {app}...")
+                    run_occ("app:enable", app, quiet=True)
+                else:
+                    print(f"   Disabling {app}...")
+                    run_occ("app:disable", app, quiet=True)
+                changes += 1
+
+    if not enforce:
+        print("\nThis was a dry-run (no changes made).")
+        print("To apply changes, run: python3 nextcloud-app-enforce.py --enforce")
+    else:
+        if changes > 0:
+            print(f"\n✅ {changes} change(s) applied. Running quick repair...")
+            run_occ("maintenance:repair", quiet=True)
+        else:
+            print("\n✅ No changes needed — everything matches desired state.")
+
+if __name__ == "__main__":
+    main()
