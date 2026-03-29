@@ -3,8 +3,8 @@
 Nextcloud App Inventory Script
 
 Usage:
-  python3 nextcloud-app-inventory                   # Print inventory only (safe)
-  python3 nextcloud-app-inventory --save            # Print + save current state as desired config
+  nextcloud-app-inventory                # Print inventory only (safe)
+  nextcloud-app-inventory --save         # Print + save current state as desired config
 """
 
 import json
