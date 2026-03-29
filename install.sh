@@ -1,29 +1,35 @@
 #!/bin/bash
 # vim: set ts=4 sw=4 et
 
-# 1. Configuration and Directory Setup
+# 1. Path Discovery
+# Get the absolute path of the directory where this install.sh lives
+REPO_DIR=$(dirname "$(realpath "$0")")
+SCRIPTS_SRC="$REPO_DIR/scripts"
 DEST_DIR="$HOME/.local/bin"
+
+echo "Scripts dir: $SCRIPTS_SRC"
+
 mkdir -p "$DEST_DIR" ~/.config
 
 # Check for symlink flag (-s or --symlink)
 USE_SYMLINKS=false
 if [[ "$1" == "-s" || "$1" == "--symlink" ]]; then
     USE_SYMLINKS=true
-    echo "--- Mode: Symlinking scripts for development ---"
+    echo "--- Mode: Symlinking scripts from $SCRIPTS_SRC ---"
 else
-    echo "--- Mode: Copying scripts (standard install) ---"
+    echo "--- Mode: Copying scripts from $SCRIPTS_SRC ---"
 fi
 
-# 2. Install scripts into ~/.local/bin via loop
-for script_path in scripts/*.sh; do
-    # Skip if no .sh files found
+# 2. Install scripts via absolute path discovery
+for script_path in "$SCRIPTS_SRC"/*; do
+    # Ensure the glob matched actual files
     [ -e "$script_path" ] || continue
     
     filename=$(basename "$script_path")
     
     if [ "$USE_SYMLINKS" = true ]; then
         # Create absolute symlink (force overwrite)
-        ln -sf "$(realpath "$script_path")" "$DEST_DIR/$filename"
+        ln -sf "$script_path" "$DEST_DIR/$filename"
         echo "Linked: $filename"
     else
         # Standard copy
@@ -49,7 +55,6 @@ if [ ! -f "$LOGROTATE_CONF" ]; then
     notifempty
 }
 EOF
-    # Set proper permissions for logrotate configs
     sudo chmod 644 "$LOGROTATE_CONF"
 else
     echo "Logrotate config already exists at $LOGROTATE_CONF. Skipping."
