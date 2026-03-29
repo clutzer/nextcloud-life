@@ -11,27 +11,43 @@ echo "apc.enable_cli=1" | sudo tee /etc/php/8.1/cli/conf.d/99-nextcloud-apcu.ini
 # 3. Restart Apache so it loads the extension
 sudo systemctl restart apache2
 
-# 4. Tell Nextcloud to use APCu for local cache (only if not already set)
+# 4. Tell Nextcloud to use APCu for local cache and locking (only if not already set)
 CURRENT_CACHE=$(sudo -u www-data php /var/www/nextcloud/occ config:system:get memcache.local 2>/dev/null)
-
 if [ "$CURRENT_CACHE" != "\OC\Memcache\APCu" ]; then
     sudo -u www-data php /var/www/nextcloud/occ config:system:set memcache.local --value '\OC\Memcache\APCu'
+fi
+
+CURRENT_LOCKING=$(sudo -u www-data php /var/www/nextcloud/occ config:system:get memcache.locking 2>/dev/null)
+if [ "$CURRENT_LOCKING" != "\OC\Memcache\APCu" ]; then
+    sudo -u www-data php /var/www/nextcloud/occ config:system:set memcache.locking --value '\OC\Memcache\APCu'
 fi
 
 # 5. Verification Block
 echo
 echo "--- Verification ---"
 
-# Check if the config value was set correctly
-CACHE_VAL=$(sudo -u www-data php /var/www/nextcloud/occ config:system:get memcache.local)
+# Check local cache status
+CACHE_VAL=$(sudo -u www-data php /var/www/nextcloud/occ config:system:get memcache.local 2>/dev/null)
 if [ "$CACHE_VAL" == "\OC\Memcache\APCu" ]; then
     if [ "$CURRENT_CACHE" == "$CACHE_VAL" ]; then
         echo "✔ Nextcloud was already using memcache (APCu)"
     else
-        echo "✔ Nextcloud is using memcache (APCu)"
+        echo "✔ Nextcloud is now using memcache (APCu)"
     fi
 else
     echo "✘ Nextcloud is not using memcache! (APCu)"
+fi
+
+# Check locking status
+LOCK_VAL=$(sudo -u www-data php /var/www/nextcloud/occ config:system:get memcache.locking 2>/dev/null)
+if [ "$LOCK_VAL" == "\OC\Memcache\APCu" ]; then
+    if [ "$CURRENT_LOCKING" == "$LOCK_VAL" ]; then
+        echo "✔ Nextcloud was already using APCu for transactional locking"
+    else
+        echo "✔ Nextcloud is now using APCu for transactional locking"
+    fi
+else
+    echo "✘ Nextcloud is not using APCu for transactional locking!"
 fi
 
 # Run the integrity check and handle the silent output
