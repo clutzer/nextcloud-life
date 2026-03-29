@@ -54,9 +54,13 @@ An idempotent script to configure APCu as the local memory cache.
 Use the following commands to diagnose issues if the Admin Panel reports errors:
 
 * **View the last 10 errors (JSON filter):**
-  sudo grep '"level":3' /mnt/storage/nextcloud/nextcloud.log | tail -n 10
+```
+sudo grep '"level":3' /mnt/storage/nextcloud/nextcloud.log | tail -n 10
+```
 * **Real-time Log Tailing:**
-  occ log:tail -f
+```
+occ log:tail -f
+```
 
 ### Common Error Levels
 | Level | Meaning | Action |
