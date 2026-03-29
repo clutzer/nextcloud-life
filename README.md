@@ -71,7 +71,9 @@ If you have resolved the underlying issues but the warning persists in the web U
 
 ```
 occ log:manage --clear
-\# OR via system truncate
+```
+OR, via system truncate:
+```
 sudo truncate -s 0 /mnt/storage/nextcloud/nextcloud.log
 ```
 
