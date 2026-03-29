@@ -81,7 +81,10 @@ sudo truncate -s 0 /mnt/storage/nextcloud/nextcloud.log
 
 ### Sudo Alias
 Add this to your `~/.bashrc` to make `occ` feel native:
+```
 alias occ='sudo -u www-data /usr/bin/php /var/www/nextcloud/occ'
+```
 
 ### Log Rotation
 Logs are managed via `copytruncate` in `/etc/logrotate.d/nextcloud`. This prevents file-handle lockups during the rotation of the `nextcloud.log`.
+
