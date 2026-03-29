@@ -18,9 +18,13 @@ A collection of robust shell scripts and configuration templates designed to aut
 
 2. **Run the installer:**
    - **Standard Install (Copies):**
+```
      ./install.sh
+```
    - **Developer Install (Symlinks):**
+```
      ./install.sh --symlink
+```
 
 *The installer configures `/etc/logrotate.d/nextcloud` and `/etc/sudoers.d/nextcloud-sa` automatically.*
 
@@ -64,9 +68,12 @@ Use the following commands to diagnose issues if the Admin Panel reports errors:
 
 ### Resetting the "X Errors in Log" Warning
 If you have resolved the underlying issues but the warning persists in the web UI, clear the log file:
+
+```
 occ log:manage --clear
-# OR via system truncate
+\# OR via system truncate
 sudo truncate -s 0 /mnt/storage/nextcloud/nextcloud.log
+```
 
 ## ⚙️ Configuration Hints
 
