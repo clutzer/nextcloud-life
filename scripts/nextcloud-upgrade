@@ -1,17 +1,16 @@
 #!/bin/bash
 
-# Configuration - update paths if necessary
+# Configuration
 NC_DIR="/var/www/nextcloud"
 PHP="/usr/bin/php"
 OCC="sudo -u www-data $PHP $NC_DIR/occ"
 UPDATER="sudo -u www-data $PHP $NC_DIR/updater/updater.phar"
-FIXUP_SCRIPT="$HOME/nextcloud-life/nextcloud-post-upgrade-fixups"
+FIXUP_SCRIPT="$HOME/.local/bin/nextcloud-post-upgrade-fixups"
+LOG_CONF="/etc/logrotate.d/nextcloud"
 
 echo "--- Checking for Nextcloud Updates ---"
 $OCC update:check
 
-# Capture the exit code of the check
-# 0 = update available, 1 = no update or error
 if [ $? -ne 0 ]; then
     echo "No updates available or check failed."
     exit 0
@@ -21,11 +20,14 @@ echo
 read -p "An update is available. Do you want to start the upgrade process? (y/n): " confirm
 
 if [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]]; then
-    echo "--- Clearing old logs for a clean upgrade slate ---"
-    $OCC log:manage --clear
+    
+    # --- NEW: Pre-upgrade Log Rotation ---
+    if [ -f "$LOG_CONF" ]; then
+        echo "Rotating logs to provide a clean slate for this upgrade..."
+        sudo logrotate -f "$LOG_CONF"
+    fi
 
     echo "--- Starting Phase 1: File Update ---"
-    # --no-interaction allows the updater to run without mid-process prompts
     $UPDATER --no-interaction
 
     echo
